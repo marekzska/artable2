@@ -5,12 +5,12 @@ export default {
   theme: {
     extend: {
       colors: {
-        canvas: '#0d0d0d',
-        gold: '#c9a96e',
-        correct: '#3d8b5e',
-        wrong: '#b34040',
-        'text-primary': '#f0ede8',
-        'text-muted': '#7a7470',
+        canvas: '#0b1520',
+        gold: '#5ecfa0',
+        correct: '#2ea87e',
+        wrong: '#c95959',
+        'text-primary': '#e8f4f0',
+        'text-muted': '#4d7a72',
       },
       fontFamily: {
         dancing: ['"Dancing Script"', 'cursive'],
