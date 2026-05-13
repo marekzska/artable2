@@ -24,6 +24,8 @@ export interface Period {
   era: string;
 }
 
+export type QuizMode = 'title' | 'artist' | 'learning';
+
 export type QuizPhase = 'answering' | 'feedback' | 'gameover' | 'victory';
 
-export type AppView = 'intro' | 'menu' | 'quiz';
+export type AppView = 'intro' | 'menu' | 'mode-select' | 'quiz' | 'learning';
