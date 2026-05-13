@@ -44,26 +44,24 @@ export function PeriodMenu({ onSelectPeriod }: Props) {
       const fact = artFacts[Math.floor(Math.random() * artFacts.length)];
       setToast(fact);
     } else {
-      tapTimerRef.current = setTimeout(() => {
-        titleTapsRef.current = 0;
-      }, 1500);
+      tapTimerRef.current = setTimeout(() => { titleTapsRef.current = 0; }, 1500);
     }
   };
 
   return (
     <motion.div
-      className="h-dvh flex flex-col bg-canvas overflow-hidden"
+      className="h-dvh flex flex-col bg-canvas"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.3 }}
     >
-      {/* Header */}
-      <header className="flex-shrink-0 flex items-center justify-center pt-5 pb-2 px-4 relative">
+      {/* Sticky header */}
+      <header className="flex-shrink-0 flex items-center justify-center pt-5 pb-3 px-4 relative">
         <button
           onClick={handleTitleTap}
           className="font-dancing text-4xl text-gold select-none leading-none"
-          aria-label="Artable - tap 5 times for a surprise"
+          aria-label="Artable"
         >
           Artable
         </button>
@@ -74,54 +72,52 @@ export function PeriodMenu({ onSelectPeriod }: Props) {
         )}
       </header>
 
-      {/* Period grid: 7 regular + 1 all = 8 items in 4×2 */}
-      <main className="flex-1 min-h-0 grid grid-cols-2 grid-rows-4 gap-2 p-3">
-        {periods.map((period, i) => (
+      {/* Scrollable period list */}
+      <main className="flex-1 overflow-y-auto px-3 pb-3">
+        <div className="flex flex-col gap-2">
+          {periods.map((period, i) => (
+            <PeriodCard
+              key={period.key}
+              period={period}
+              index={i}
+              completed={completedPeriods.includes(period.key)}
+              onClick={() => onSelectPeriod(period.key)}
+            />
+          ))}
           <PeriodCard
-            key={period.key}
-            period={period}
-            index={i}
-            completed={completedPeriods.includes(period.key)}
-            onClick={() => onSelectPeriod(period.key)}
+            key="all_periods"
+            period={{ key: 'all_periods', label: 'All Periods', era: 'The full journey' }}
+            index={7}
+            completed={false}
+            isAll
+            onClick={() => onSelectPeriod('all_periods')}
           />
-        ))}
-        <PeriodCard
-          key="all_periods"
-          period={{ key: 'all_periods', label: 'All Periods', era: 'The full journey' }}
-          index={7}
-          completed={false}
-          isAll
-          onClick={() => onSelectPeriod('all_periods')}
-        />
+
+          {/* Secret card — unlocked after completing all 7 base periods */}
+          <AnimatePresence>
+            {allBaseCompleted && (
+              <motion.button
+                key="hidden-gems"
+                className="w-full rounded-xl py-3 border border-gold/15 bg-gold/[0.04] flex items-center justify-center"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                transition={{ duration: 0.6 }}
+                onClick={() => {
+                  setToast('✨ You found the hidden collection. Grand Masters only.');
+                  setTimeout(() => onSelectPeriod('all_periods'), 1600);
+                }}
+              >
+                <span className="font-inter text-gold/50 text-[0.6rem] tracking-[0.2em] uppercase">
+                  Hidden Gems
+                </span>
+              </motion.button>
+            )}
+          </AnimatePresence>
+        </div>
       </main>
 
-      {/* Secret 9th card — appears when all 7 base periods are completed */}
-      <AnimatePresence>
-        {allBaseCompleted && (
-          <motion.div
-            className="flex-shrink-0 px-3 pb-1"
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            transition={{ duration: 0.6, ease: 'easeOut' }}
-          >
-            <button
-              onClick={() => {
-                setToast('✨ You found the hidden collection. Grand Masters only.');
-                setTimeout(() => onSelectPeriod('all_periods'), 1600);
-              }}
-              className="w-full rounded-xl py-2 border border-gold/15 bg-gold/5 flex items-center justify-center gap-2"
-            >
-              <span className="font-inter text-gold/50 text-[0.6rem] tracking-[0.2em] uppercase">
-                Hidden Gems
-              </span>
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Footer */}
-      <footer className="flex-shrink-0 pb-3 text-center">
-        <p className="font-inter text-text-muted/20 text-[0.55rem] tracking-widest uppercase">
+      <footer className="flex-shrink-0 pb-4 text-center">
+        <p className="font-inter text-text-muted/30 text-[0.55rem] tracking-widest uppercase">
           by @marekzska
         </p>
       </footer>

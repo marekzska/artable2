@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PeriodKey } from '../data/types';
+import { PeriodKey, QuizMode } from '../data/types';
 import { useQuiz } from '../hooks/useQuiz';
 import { useIdle } from '../hooks/useIdle';
 import { LivesBar } from './LivesBar';
@@ -15,7 +15,7 @@ import { CuratorOverlay } from './CuratorOverlay';
 const WRONG_QUOTES = [
   'Even Picasso had off days…',
   'Art is subjective. Your answer was not.',
-  '"Every artist was first an amateur." — Emerson',
+  '“Every artist was first an amateur.” — Emerson',
   'The Louvre thanks you for your honesty.',
   'Monet would be disappointed. And he was nearly blind.',
   'The brushstrokes speak. You just have to listen.',
@@ -23,11 +23,12 @@ const WRONG_QUOTES = [
 
 interface Props {
   period: PeriodKey;
+  mode: QuizMode;
   onBack: () => void;
 }
 
-export function Quiz({ period, onBack }: Props) {
-  const quiz = useQuiz(period);
+export function Quiz({ period, mode, onBack }: Props) {
+  const quiz = useQuiz(period, mode);
   const [isIdle, setIsIdle] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [showCurator, setShowCurator] = useState(false);
@@ -53,17 +54,14 @@ export function Quiz({ period, onBack }: Props) {
   }, [quiz.phase, period]);
 
   const handleAnswer = useCallback((option: string) => {
-    const isCorrect = option === quiz.artwork.title;
-
+    const isCorrect = option === quiz.correctAnswer;
     if (!isCorrect && quiz.currentIndex === 0 && quiz.correctCount === 0) {
       const quote = WRONG_QUOTES[Math.floor(Math.random() * WRONG_QUOTES.length)];
       setTimeout(() => setToast(quote), 300);
     }
-
     if (curatorMode && quiz.artwork.bio) {
       setTimeout(() => setShowCurator(true), 200);
     }
-
     quiz.answer(option);
   }, [quiz, curatorMode]);
 
@@ -74,6 +72,10 @@ export function Quiz({ period, onBack }: Props) {
     return <Victory correctCount={quiz.correctCount} total={quiz.total} onBack={onBack} onRetry={quiz.reset} />;
   }
 
+  // The hint shown during answering: artist name in title-mode, artwork title in artist-mode
+  const hint = mode === 'artist' ? quiz.artwork.title : quiz.artwork.author;
+  const hintLabel = mode === 'artist' ? '' : '';
+
   return (
     <motion.div
       className="h-dvh flex flex-col bg-canvas overflow-hidden relative"
@@ -83,30 +85,45 @@ export function Quiz({ period, onBack }: Props) {
       transition={{ duration: 0.3 }}
     >
       {/* Top bar */}
-      <div className="flex-shrink-0 flex items-center justify-between px-4 pt-safe pt-4 pb-1">
+      <div className="flex-shrink-0 flex items-center justify-between px-4 pt-4 pb-1">
         <LivesBar lives={quiz.lives} />
         <ProgressBar current={quiz.currentIndex + 1} total={quiz.total} />
       </div>
 
-      {/* Artwork image — fills available space */}
+      {/* Hint line — always visible, tells user what they’re looking at */}
+      <div className="flex-shrink-0 px-4 pt-1 pb-0.5 text-center min-h-[1.6rem]">
+        <p className="font-inter text-text-muted text-xs truncate">
+          {hintLabel}{hint ?? ' '}
+        </p>
+      </div>
+
+      {/* Artwork */}
       <div className="flex-1 min-h-0 px-3 py-1">
         <ArtworkDisplay artwork={quiz.artwork} isPulsing={isIdle && quiz.phase === 'answering'} />
       </div>
 
-      {/* Artist info — revealed during feedback */}
-      <div className="flex-shrink-0 px-4 py-1" style={{ minHeight: '2.75rem' }}>
+      {/* Reveal block — shown during feedback */}
+      <div className="flex-shrink-0 px-4 py-1" style={{ minHeight: '2.5rem' }}>
         <motion.div
           animate={{ opacity: quiz.phase === 'feedback' ? 1 : 0, y: quiz.phase === 'feedback' ? 0 : 4 }}
-          transition={{ duration: 0.25 }}
+          transition={{ duration: 0.22 }}
           className="text-center"
         >
-          <p className="font-playfair text-gold text-sm leading-tight">
-            {quiz.artwork.author}
-          </p>
-          <p className="font-inter text-text-muted text-[0.65rem] mt-0.5">
-            {quiz.artwork.artmovement}
-            {quiz.artwork.year ? ` · ${quiz.artwork.year}` : ''}
-          </p>
+          {mode === 'title' ? (
+            <>
+              <p className="font-playfair text-gold text-sm leading-tight">{quiz.artwork.title}</p>
+              <p className="font-inter text-text-muted text-[0.62rem] mt-0.5">
+                {quiz.artwork.artmovement}{quiz.artwork.year ? ` · ${quiz.artwork.year}` : ''}
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="font-playfair text-gold text-sm leading-tight">{quiz.artwork.author}</p>
+              <p className="font-inter text-text-muted text-[0.62rem] mt-0.5">
+                {quiz.artwork.artmovement}{quiz.artwork.year ? ` · ${quiz.artwork.year}` : ''}
+              </p>
+            </>
+          )}
         </motion.div>
       </div>
 
@@ -114,7 +131,7 @@ export function Quiz({ period, onBack }: Props) {
       <div className="flex-shrink-0 px-3 pb-1">
         <AnswerGrid
           options={quiz.options}
-          correctAnswer={quiz.artwork.title}
+          correctAnswer={quiz.correctAnswer}
           selectedOption={quiz.selectedOption}
           phase={quiz.phase}
           onAnswer={handleAnswer}
@@ -128,14 +145,12 @@ export function Quiz({ period, onBack }: Props) {
         </p>
       </div>
 
-      {/* Curator overlay (easter egg) */}
       <AnimatePresence>
         {showCurator && quiz.artwork.bio && (
           <CuratorOverlay key="curator" bio={quiz.artwork.bio} />
         )}
       </AnimatePresence>
 
-      {/* Toast */}
       <AnimatePresence>
         {toast && (
           <Toast key={toast} message={toast} onDismiss={() => setToast(null)} duration={3500} />
