@@ -10,16 +10,38 @@ const LS_OPTIONS = 'artable_options';
 const LS_PERIOD = 'artable_period';
 const LS_MODE = 'artable_mode';
 
+function isUnknownAuthor(author: string): boolean {
+  const s = author.trim().toLowerCase();
+  return s === '' || s === 'unknown' || s === 'anonymous' || s === 'various';
+}
+
+function getQuizArtworks(period: PeriodKey, mode: QuizMode): Artwork[] {
+  const all = getArtworksForPeriod(period);
+  // Artist mode: skip artworks with no attributable author
+  return mode === 'artist' ? all.filter(a => !isUnknownAuthor(a.author)) : all;
+}
+
 function generateOptions(artworks: Artwork[], currentIndex: number, mode: QuizMode): string[] {
   if (mode === 'artist') {
     const correct = artworks[currentIndex].author;
+    // Pool: unique known authors from the rest of the list
     const pool = [...new Set(
-      artworks.filter((_, i) => i !== currentIndex).map(a => a.author)
+      artworks
+        .filter((a, i) => i !== currentIndex && !isUnknownAuthor(a.author) && a.author !== correct)
+        .map(a => a.author)
     )];
     const wrong = shuffle(pool).slice(0, 3);
-    // Pad with generic names if not enough unique authors
-    while (wrong.length < 3) wrong.push(`Unknown ${wrong.length + 1}`);
-    return shuffle([correct, ...wrong]);
+    // If the period doesn't have enough unique authors, pull from all periods
+    if (wrong.length < 3) {
+      const allAuthors = [...new Set(
+        getArtworksForPeriod('all_periods')
+          .filter(a => !isUnknownAuthor(a.author) && a.author !== correct)
+          .map(a => a.author)
+      )];
+      const extra = shuffle(allAuthors.filter(a => !wrong.includes(a)));
+      while (wrong.length < 3 && extra.length > 0) wrong.push(extra.shift()!);
+    }
+    return shuffle([correct, ...wrong.slice(0, 3)]);
   }
   const correct = artworks[currentIndex].title;
   const pool = artworks.filter((_, i) => i !== currentIndex).map(a => a.title);
@@ -37,7 +59,7 @@ interface State {
 }
 
 export function useQuiz(period: PeriodKey, mode: QuizMode) {
-  const artworks = getArtworksForPeriod(period);
+  const artworks = getQuizArtworks(period, mode);
 
   const [state, setState] = useState<State>(() => {
     const savedPeriod = localStorage.getItem(LS_PERIOD);
